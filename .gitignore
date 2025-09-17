@@ -1,0 +1,7 @@
+node_modules
+.env
+.DS_Store
+apps/**/dist
+
+# pnpm state
+.pnpm-store
