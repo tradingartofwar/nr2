@@ -1,0 +1,5 @@
+### Pilot health
+GET http://localhost:5000/healthz
+
+### Pilot status
+GET http://localhost:5000/status
