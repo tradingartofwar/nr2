@@ -32,7 +32,7 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
     if (!user) return reply.code(401).send({ ok: false, error: { message: 'Unauthorized' } })
 
     const { data, error } = await fastify.supabase
-      .from<RoomRecord>('rooms')
+      .from('rooms')
       .select('id, name, created_at')
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
@@ -41,7 +41,8 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       fastify.log.error({ err: error }, 'Failed to list rooms')
       return { ok: false, error }
     }
-    return { ok: true, data: data ?? [] }
+    const rows = (data as RoomRecord[] | null) ?? []
+    return { ok: true, data: rows }
   })
 
   // Create or get a room by name
@@ -54,8 +55,8 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
     if (!name) return reply.code(400).send({ ok: false, error: { message: 'Missing room name' } })
 
     // Try to find by exact name first
-    const { data: existing, error: selErr } = await fastify.supabase
-      .from<RoomRecord>('rooms')
+    const { data: existingRaw, error: selErr } = await fastify.supabase
+      .from('rooms')
       .select('*')
       .eq('name', name)
       .eq('owner_id', user.id)
@@ -65,6 +66,7 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       fastify.log.error({ err: selErr }, 'Failed to query room')
       return reply.code(500).send({ ok: false, error: selErr })
     }
+    const existing = (existingRaw as RoomRecord | null) ?? null
     if (existing) return { ok: true, data: existing }
 
     // Insert minimal required fields. Use generated UUIDs for project_id and created_by for now.
@@ -93,8 +95,8 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
     // Find room by id first (only if the param looks like a UUID), then by name
     let room: RoomRecord | null = null
     if (looksLikeUUID(idOrName)) {
-      const { data: roomById, error: queryByIdError } = await fastify.supabase
-        .from<RoomRecord>('rooms')
+      const { data: roomByIdRaw, error: queryByIdError } = await fastify.supabase
+        .from('rooms')
         .select('*')
         .eq('id', idOrName)
         .eq('owner_id', user.id)
@@ -104,11 +106,11 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
         fastify.log.error({ err: queryByIdError }, 'Failed to query room by id')
         return reply.code(500).send({ ok: false, error: queryByIdError })
       }
-      room = roomById
+      room = (roomByIdRaw as RoomRecord | null) ?? null
     }
     if (!room) {
-      const { data: byName, error: byNameErr } = await fastify.supabase
-        .from<RoomRecord>('rooms')
+      const { data: byNameRaw, error: byNameErr } = await fastify.supabase
+        .from('rooms')
         .select('*')
         .eq('name', idOrName)
         .eq('owner_id', user.id)
@@ -118,7 +120,7 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
         fastify.log.error({ err: byNameErr }, 'Failed to query room by name')
         return reply.code(500).send({ ok: false, error: byNameErr })
       }
-      room = byName
+      room = (byNameRaw as RoomRecord | null) ?? null
     }
     if (!room) return reply.code(404).send({ ok: false, error: { message: 'Room not found' } })
 
@@ -127,11 +129,12 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
 
     // Create a people record for this submission author (minimal required fields)
     const personInsert = { room_id: room.id, user_id: user.id }
-    const { data: person, error: personErr } = await fastify.supabase.from('people').insert(personInsert).select().single()
+    const { data: personRaw, error: personErr } = await fastify.supabase.from('people').insert(personInsert).select().single()
     if (personErr) {
       fastify.log.error({ err: personErr }, 'Failed to create person record')
       return reply.code(500).send({ ok: false, error: personErr })
     }
+    const person = personRaw as { id: string }
 
     const submissionInsert = {
       room_id: room.id,
@@ -142,13 +145,17 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       state: 'submitted',
       owner_id: user.id
     }
-    const { data: created, error: subErr } = await fastify.supabase.from('problem_submissions').insert(submissionInsert).select().single()
+    const { data: createdRaw, error: subErr } = await fastify.supabase
+      .from('problem_submissions')
+      .insert(submissionInsert)
+      .select()
+      .single()
     if (subErr) {
       fastify.log.error({ err: subErr }, 'Failed to insert submission')
       return reply.code(500).send({ ok: false, error: subErr })
     }
 
-    return { ok: true, data: { roomId: room.id, submission: created } }
+    return { ok: true, data: { roomId: room.id, submission: createdRaw as ProblemSubmissionRecord } }
   })
 
   // List submissions for a room (by id or name)
@@ -162,8 +169,8 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
     // Find room by id first (only if the param looks like a UUID), then by name
     let room: RoomRecord | null = null
     if (looksLikeUUID(idOrName)) {
-      const { data: roomById, error: queryByIdError } = await fastify.supabase
-        .from<RoomRecord>('rooms')
+      const { data: roomByIdRaw, error: queryByIdError } = await fastify.supabase
+        .from('rooms')
         .select('*')
         .eq('id', idOrName)
         .eq('owner_id', user.id)
@@ -173,11 +180,11 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
         fastify.log.error({ err: queryByIdError }, 'Failed to query room by id')
         return reply.code(500).send({ ok: false, error: queryByIdError })
       }
-      room = roomById
+      room = (roomByIdRaw as RoomRecord | null) ?? null
     }
     if (!room) {
-      const { data: byName, error: byNameErr } = await fastify.supabase
-        .from<RoomRecord>('rooms')
+      const { data: byNameRaw, error: byNameErr } = await fastify.supabase
+        .from('rooms')
         .select('*')
         .eq('name', idOrName)
         .eq('owner_id', user.id)
@@ -187,12 +194,12 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
         fastify.log.error({ err: byNameErr }, 'Failed to query room by name')
         return reply.code(500).send({ ok: false, error: byNameErr })
       }
-      room = byName
+      room = (byNameRaw as RoomRecord | null) ?? null
     }
     if (!room) return reply.code(404).send({ ok: false, error: { message: 'Room not found' } })
 
     const { data: rows, error: rowsErr } = await fastify.supabase
-      .from<ProblemSubmissionRecord>('problem_submissions')
+      .from('problem_submissions')
       .select('*')
       .eq('room_id', room.id)
       .eq('owner_id', user.id)

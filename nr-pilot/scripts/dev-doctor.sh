@@ -31,6 +31,6 @@ for value in "$nodes_count" "$suggestions_count" "$consents_count"; do
     echo "Non-numeric count detected: $value" >&2
     exit 1
   fi
-fi
+done
 
 echo "Doctor checks passed"
