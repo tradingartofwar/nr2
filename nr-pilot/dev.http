@@ -5,3 +5,27 @@ GET http://localhost:{{port}}/healthz
 
 ### Pilot status
 GET http://localhost:{{port}}/status
+
+### Admin pending (optional query: states=ghost&states=admin_approved)
+GET http://localhost:{{port}}/admin/pending
+
+### Admin approve (edit id)
+POST http://localhost:{{port}}/admin/approve
+content-type: application/json
+
+{
+  "ids": ["<suggestion-id>"]
+}
+
+### Consent decision (accept/decline)
+POST http://localhost:{{port}}/consent
+content-type: application/json
+
+{
+  "ids": ["<suggestion-id>"],
+  "action": "accept",
+  "userId": "userA"
+}
+
+### Reset suggestions
+POST http://localhost:{{port}}/admin/reset

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs/promises');
 const path = require('path');
-const { ensureStateDir, resolveFilePath, writeJsonAtomic } = require('../backend/lib/store.cjs');
+const { ensureStateDir, resolveFilePath, writeJsonAtomic, appendJsonLine } = require('../backend/lib/store.cjs');
 const { createRng } = require('../backend/lib/rng.cjs');
 const {
   STRENGTHS,
@@ -121,9 +121,7 @@ async function fileExists(filePath) {
 }
 
 async function appendEvent(event) {
-  const filePath = resolveFilePath('events.log.jsonl');
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.appendFile(filePath, `${JSON.stringify(event)}\n`, 'utf8');
+  await appendJsonLine('events.log.jsonl', event);
 }
 
 (async () => {
