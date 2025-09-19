@@ -7,6 +7,7 @@ export interface Room {
   purpose: string | null;
   settings: Record<string, unknown>;
   created_by: string;
+  owner_id: string;
   created_at: string;
 }
 
@@ -41,5 +42,6 @@ export interface ProblemSubmission {
   evidence_json: Array<{ url: string; note?: string }>;
   anonymity: boolean;
   state: 'draft' | 'submitted' | 'locked';
+  owner_id: string;
   created_at: string;
 }
