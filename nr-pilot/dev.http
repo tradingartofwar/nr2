@@ -1,5 +1,7 @@
+@port = {{port=5000}}
+
 ### Pilot health
-GET http://localhost:5000/healthz
+GET http://localhost:{{port}}/healthz
 
 ### Pilot status
-GET http://localhost:5000/status
+GET http://localhost:{{port}}/status
