@@ -74,11 +74,19 @@ async function countOf(fileName) {
   return Array.isArray(data) ? data.length : 0;
 }
 
+async function appendJsonLine(fileName, entry) {
+  const filePath = resolveFilePath(fileName);
+  const dir = path.dirname(filePath);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.appendFile(filePath, `${JSON.stringify(entry)}\n`, 'utf8');
+}
+
 module.exports = {
   getStateDir,
   ensureStateDir,
   readJsonSafe,
   writeJsonAtomic,
   countOf,
-  resolveFilePath
+  resolveFilePath,
+  appendJsonLine
 };

@@ -25,6 +25,7 @@ async function main() {
 
   fastify.get('/healthz', async () => ({ ok: true }));
   fastify.register(require('./routes/status.cjs'));
+  fastify.register(require('./routes/admin.cjs'));
 
   try {
     await fastify.listen({ port, host });

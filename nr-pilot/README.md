@@ -32,6 +32,32 @@ Re-run the doctor or status check to confirm counts:
 curl -s http://localhost:5000/status | jq '.counts'
 ```
 
+### Admin utilities
+
+- List pending suggestions:
+
+  ```bash
+  curl -s http://localhost:5000/admin/pending | jq '.data | length'
+  ```
+
+- Approve and advance consent state:
+
+  ```bash
+  curl -s -X POST http://localhost:5000/admin/approve \\
+    -H 'content-type: application/json' \\
+    -d '{"ids":["<suggestion-id>"]}'
+
+  curl -s -X POST http://localhost:5000/consent \\
+    -H 'content-type: application/json' \\
+    -d '{"ids":["<suggestion-id>"],"action":"accept","userId":"userA"}'
+  ```
+
+- Reset suggestions while keeping nodes intact:
+
+  ```bash
+  curl -s -X POST http://localhost:5000/admin/reset | jq .
+  ```
+
 ## Developer helpers
 
 - `dev.http` – REST client snippets for `/healthz` and `/status`.
