@@ -39,10 +39,10 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       .limit(100)
     if (error) {
       fastify.log.error({ err: error }, 'Failed to list rooms')
-      return { ok: false, error }
+      return reply.send({ ok: false, error })
     }
     const rows = (data as RoomRecord[] | null) ?? []
-    return { ok: true, data: rows }
+    return reply.send({ ok: true, data: rows })
   })
 
   // Create or get a room by name
@@ -67,7 +67,7 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       return reply.code(500).send({ ok: false, error: selErr })
     }
     const existing = (existingRaw as RoomRecord | null) ?? null
-    if (existing) return { ok: true, data: existing }
+    if (existing) return reply.send({ ok: true, data: existing })
 
     // Insert minimal required fields. Use generated UUIDs for project_id and created_by for now.
     const insert = {
@@ -76,12 +76,13 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       created_by: user.id,
       owner_id: user.id
     }
-    const { data: created, error: insErr } = await fastify.supabase.from('rooms').insert(insert).select().single()
+    const { data: createdRaw, error: insErr } = await fastify.supabase.from('rooms').insert(insert).select().single()
     if (insErr) {
       fastify.log.error({ err: insErr }, 'Failed to create room')
       return reply.code(500).send({ ok: false, error: insErr })
     }
-    return { ok: true, data: created }
+    const created = createdRaw as RoomRecord
+    return reply.code(201).send({ ok: true, data: created })
   })
 
   // Post a submission to a room (by id or name)
@@ -155,7 +156,9 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       return reply.code(500).send({ ok: false, error: subErr })
     }
 
-    return { ok: true, data: { roomId: room.id, submission: createdRaw as ProblemSubmissionRecord } }
+    return reply
+      .code(201)
+      .send({ ok: true, data: { roomId: room.id, submission: createdRaw as ProblemSubmissionRecord } })
   })
 
   // List submissions for a room (by id or name)
@@ -209,7 +212,8 @@ export const registerRoomsRoutes = async (fastify: FastifyInstance): Promise<voi
       return reply.code(500).send({ ok: false, error: rowsErr })
     }
 
-    return { ok: true, data: rows ?? [], roomId: room.id }
+    const submissions = (rows as ProblemSubmissionRecord[] | null) ?? []
+    return reply.send({ ok: true, data: submissions, roomId: room.id })
   })
 }
 

@@ -4,6 +4,7 @@ import { createEnv } from './env.js';
 import { createSupabaseClient } from './supabase.js';
 import authPlugin from './plugins/supabase-auth.js';
 import { registerHealthRoutes } from './routes/health.js';
+import registerRoomsRoutes from './routes/rooms.js';
 
 export const buildServer = (): FastifyInstance => {
   const env = createEnv();
@@ -18,6 +19,7 @@ export const buildServer = (): FastifyInstance => {
 
   fastify.register(authPlugin);
   fastify.register(registerHealthRoutes);
+  fastify.register(registerRoomsRoutes);
 
   return fastify;
 };
