@@ -26,6 +26,18 @@ pnpm --filter @apn/api dev
 
 The Fastify server will start on port `4000` (configurable via `API_PORT`). A health check is exposed at `GET /healthz`.
 
+#### Quick verification
+
+- Export a Supabase user token: `export APN_JWT="<bearer token>"`.
+- Run the doctor script to exercise public and authenticated paths: `./scripts/dev-doctor.sh`.
+- Explore the endpoints with `apps/api/dev.http` (fill in `{{token}}`).
+
+#### Tests
+
+```bash
+pnpm --filter @apn/api test
+```
+
 ## Repository layout
 
 - `apps/api` — Fastify + Supabase service with authentication middleware and health check route.

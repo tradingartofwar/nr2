@@ -21,6 +21,14 @@ run() {
 
 run "/healthz" "$API_BASE/healthz"
 run "/" "$API_BASE/"
+
+echo "== submissions unauthenticated (expect 401) =="
+curl -s -o /tmp/dev-doctor-unauth.out -w "HTTP:%{http_code}\n" \
+  -X POST "$API_BASE/rooms/room-1/submissions" "${json_header[@]}" \
+  -d '{"payload":{"msg":"unauth","ts":"'"$(date -Is)"'"}}'
+cat /tmp/dev-doctor-unauth.out
+echo
+
 run "rooms list" "${auth[@]}" "$API_BASE/rooms"
 
 RID=$(curl -s -X POST "${auth[@]}" "${json_header[@]}" "$API_BASE/rooms" \
