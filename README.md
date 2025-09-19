@@ -38,6 +38,8 @@ The Fastify server will start on port `4000` (configurable via `API_PORT`). A he
 pnpm --filter @apn/api test
 ```
 
+Set `APN_TEST_JWT` (or `API_TEST_JWT`) to a confirmed Supabase user token to exercise the authenticated submission path during the test run.
+
 ## Repository layout
 
 - `apps/api` — Fastify + Supabase service with authentication middleware and health check route.
