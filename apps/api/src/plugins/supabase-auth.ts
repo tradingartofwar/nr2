@@ -1,61 +1,73 @@
-import fp from 'fastify-plugin';
-import type { FastifyPluginCallback } from 'fastify';
-import type { AuthUser } from '@supabase/supabase-js';
+// apps/api/src/plugins/supabase-auth.ts
+import fp from "fastify-plugin";
+import type { FastifyInstance, FastifyPluginAsync, FastifyRequest } from "fastify";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 
-export interface SupabaseAuthPluginOptions {
-  publicRoutes?: string[];
+type PublicMatcher = string | RegExp | ((req: FastifyRequest) => boolean);
+interface PluginOpts { publicRoutes?: PublicMatcher[]; }
+
+function envOrThrow(name: string): string {
+  const v = process.env[name];
+  if (!v || !v.trim()) throw new Error(`[supabase-auth] Missing required env ${name}. Check apps/api/.env`);
+  return v.trim();
 }
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    supabaseToken?: string;
-    supabaseUser: AuthUser | null;
+function isPublic(req: FastifyRequest, allow: PublicMatcher[]): boolean {
+  const routePath = req.routeOptions?.url ?? req.url;
+  for (const matcher of allow) {
+    if (typeof matcher === "string") {
+      if (matcher === routePath) return true;
+    } else if (matcher instanceof RegExp) {
+      if (matcher.test(req.url)) return true;
+    } else if (typeof matcher === "function") {
+      try {
+        if (matcher(req)) return true;
+      } catch (_err) {
+        /* ignore matcher errors */
+      }
+    }
   }
+
+  const routeConfig = req.routeOptions?.config as { public?: boolean } | undefined;
+  return routeConfig?.public === true;
 }
 
-const supabaseAuthPlugin: FastifyPluginCallback<SupabaseAuthPluginOptions> = (fastify, opts, done) => {
-  const publicRoutes = opts.publicRoutes ?? ['/healthz'];
+declare module "fastify" {
+  interface FastifyInstance { supabase: SupabaseClient; }
+  interface FastifyRequest { user?: User; }
+}
 
-  fastify.addHook('onRequest', async (request, reply) => {
-    request.supabaseUser = null;
+const supabaseAuth: FastifyPluginAsync<PluginOpts> = fp(
+  async (fastify: FastifyInstance, opts: PluginOpts = {}) => {
+    const SUPABASE_URL = envOrThrow("SUPABASE_URL");
+    const SERVICE_KEY  = envOrThrow("SUPABASE_SERVICE_ROLE_KEY");
 
-    const routeConfig = request.routeOptions.config as { public?: boolean } | undefined;
-    const isRoutePublic = Boolean(routeConfig?.public);
-    const matchesPublicPattern = publicRoutes.some((route) =>
-      route.endsWith('*') ? request.url.startsWith(route.slice(0, -1)) : route === request.url
-    );
-
-    if (isRoutePublic || matchesPublicPattern) {
-      return;
+    // Safe decorate (idempotent across hot-reloads)
+    const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+    const hasSupabaseDecorator = typeof fastify.hasDecorator === "function" && fastify.hasDecorator("supabase");
+    if (hasSupabaseDecorator) {
+      fastify.supabase = sb;
+    } else {
+      fastify.decorate("supabase", sb);
     }
 
-    const header = request.headers.authorization;
-    if (!header) {
-      reply.code(401).send({ ok: false, error: { code: 'UNAUTHORIZED', msg: 'Missing bearer token' } });
-      return reply;
-    }
+    const allowlist: PublicMatcher[] = opts.publicRoutes ?? [];
 
-    const token = header.replace('Bearer ', '').trim();
-    if (!token) {
-      reply.code(401).send({ ok: false, error: { code: 'UNAUTHORIZED', msg: 'Malformed bearer token' } });
-      return reply;
-    }
+    fastify.addHook("onRequest", async (req, reply) => {
+      if (isPublic(req, allowlist)) return;
 
-    const { data, error } = await fastify.supabase.auth.getUser(token);
+      const auth = req.headers.authorization || "";
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+      if (!token) return reply.code(401).send({ ok: false, error: { code: "UNAUTHORIZED", msg: "Missing bearer token" } });
 
-    if (error || !data?.user) {
-      fastify.log.warn({ err: error, tokenPreview: `${token.slice(0, 6)}…` }, 'Invalid Supabase session token');
-      reply.code(401).send({ ok: false, error: { code: 'UNAUTHORIZED', msg: 'Invalid token' } });
-      return reply;
-    }
+      const { data, error } = await fastify.supabase.auth.getUser(token);
+      if (error || !data?.user) {
+        return reply.code(401).send({ ok: false, error: { code: "UNAUTHORIZED", msg: "Invalid token" } });
+      }
+      req.user = data.user;
+    });
+  },
+  { name: "supabase-auth" }
+);
 
-    request.supabaseToken = token;
-    request.supabaseUser = data.user;
-  });
-
-  done();
-};
-
-export default fp(supabaseAuthPlugin, {
-  name: 'supabase-auth'
-});
+export default supabaseAuth;
