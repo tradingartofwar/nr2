@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${NR_BASE_URL:-http://localhost:5000}"
+PORT="${PORT:-5000}"
+BASE_URL="${NR_BASE_URL:-http://localhost:${PORT}}"
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is required for the doctor script" >&2

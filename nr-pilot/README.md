@@ -18,6 +18,20 @@ With the server running:
 curl -s http://localhost:5000/status | jq .
 ```
 
+### Deterministic seeding
+
+Populate `state.nodes.json` and `state.suggestions.json` with deterministic demo data:
+
+```bash
+node scripts/seed-demo.cjs --cohort demo --n 50 --k 3 --seed 42 --force
+```
+
+Re-run the doctor or status check to confirm counts:
+
+```bash
+curl -s http://localhost:5000/status | jq '.counts'
+```
+
 ## Developer helpers
 
 - `dev.http` – REST client snippets for `/healthz` and `/status`.

@@ -32,8 +32,8 @@ function validateSuggestions(raw) {
       suggestion &&
       typeof suggestion === 'object' &&
       typeof suggestion.id === 'string' &&
-      typeof suggestion.nodeId === 'string' &&
-      typeof suggestion.otherId === 'string',
+      ((typeof suggestion.nodeId === 'string' && typeof suggestion.otherId === 'string') ||
+        (typeof suggestion.a === 'string' && typeof suggestion.b === 'string')),
     'suggestions'
   );
 }

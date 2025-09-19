@@ -79,5 +79,6 @@ module.exports = {
   ensureStateDir,
   readJsonSafe,
   writeJsonAtomic,
-  countOf
+  countOf,
+  resolveFilePath
 };
