@@ -1,0 +1,35 @@
+### Health check
+GET http://localhost:4000/healthz
+
+### Public root
+GET http://localhost:4000/
+
+### Rooms list (requires auth)
+GET http://localhost:4000/rooms
+Authorization: Bearer {{token}}
+
+### Rooms create (idempotent, requires auth)
+POST http://localhost:4000/rooms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "room-1"
+}
+
+### Submissions — unauthenticated (expect 401)
+POST http://localhost:4000/rooms/room-1/submissions
+Content-Type: application/json
+
+{
+  "payload": { "msg": "unauth", "ts": "{{$timestamp}}" }
+}
+
+### Submissions — authenticated (expect 201)
+POST http://localhost:4000/rooms/room-1/submissions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "payload": { "msg": "auth", "ts": "{{$timestamp}}" }
+}
